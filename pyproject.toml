@@ -1,0 +1,14 @@
+[tool.bandit]
+exclude_dirs = ["app/tests/"]
+
+[tool.pytest.ini_options]
+testpaths = [
+	"tests"
+]
+python_files = "test_*.py"
+addopts = "-rf --import-mode=prepend"
+pythonpath = "/app/app"
+asyncio_mode = "auto"
+log_cli = true
+log_cli_level = "DEBUG"
+
