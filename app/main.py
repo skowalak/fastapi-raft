@@ -90,33 +90,9 @@ def logging_setup(settings: Settings):
     logging.config.dictConfig(settings.LOGGING_CONFIG)
 
 
-def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-    openapi_schema = get_openapi(
-        title=settings.FASTAPI_TITLE,
-        version="",
-        description=settings.FASTAPI_DESCR,
-        routes=app.routes,
-    )
-    for path in openapi_schema["paths"]:
-        for method in openapi_schema["paths"][path]:
-            if openapi_schema["paths"][path][method]["responses"].get("422"):
-                schema_responses = openapi_schema["paths"][path][method]["responses"]
-                schema_responses["400"] = schema_responses["422"]
-                schema_responses["400"]["description"] = "Bad Request"
-                schema_responses["400"]["content"]["application/json"]["schema"][
-                    "$ref"
-                ] = "#/components/schemas/V1ApiErrorResponse_BadRequestException_"
-                openapi_schema["paths"][path][method]["responses"].pop("422")
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-
 settings: Settings = get_settings()
 app: FastAPI = create_app(settings)
 logging_setup(settings)
-app.openapi = custom_openapi
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 if settings.BACKEND_CORS_ORIGINS:
