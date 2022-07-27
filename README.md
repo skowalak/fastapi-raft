@@ -1,6 +1,9 @@
 # Netzwerkprogrammierung SoSe2022 Abschlussprojekt
 
+### Code Style
 
+In this Code Base, the [numpydoc v1.5.dev0 standard][npdoc] for Python
+docstrings is applied.
 
 ### Deployment
 
@@ -41,3 +44,4 @@ test script see `Pipfile`.
 A human-readable service documentation is contained in the services' Swagger
 Documentation. It is reachable under `https://<service_uri>/docs`
 
+[npdoc]: https://numpydoc.readthedocs.io/en/latest/format.html

@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     Settings class emulating Flasks config mechanism in FastAPI.
     """
 
+    HOSTNAME: str  # set by docker
+    NUM_REPLICAS: int  # set by docker
+
     FASTAPI_TITLE: str = "Consensus Cluster Service"
     FASTAPI_MAINT: str = "Sebastian Kowalak"
     FASTAPI_EMAIL: str = "skowalak@techfak.uni-bielefeld.de"

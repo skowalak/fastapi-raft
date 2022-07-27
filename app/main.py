@@ -17,6 +17,7 @@ from app.api.exceptions import ApiException, BadRequestException
 from app.api.models import ApiResponse, ApiErrorResponse
 from app.api.api_global import api_router
 from app.config import Settings, get_settings
+from app.consensus.discovery import discover_replicas
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -117,6 +118,10 @@ settings: Settings = get_settings()
 app: FastAPI = create_app(settings)
 logging_setup(settings)
 app.openapi = custom_openapi
+
+# discover other services
+app.state.replicas = discover_replicas(settings)
+print(app.state.replicas)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 if settings.BACKEND_CORS_ORIGINS:
