@@ -1,11 +1,9 @@
-from ipaddress import IPv4Address, IPv4Network, IPv6Address
-from typing import Dict, List
 import logging
-import os
-import socket
+from ipaddress import IPv4Address, IPv6Address
+from typing import Dict, List
 
 from app.config import Settings
-from dns import resolver, reversename, message, asyncquery, asyncresolver
+from dns import resolver, reversename
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -28,7 +26,24 @@ def get_hostname_by_ip(address: IPv4Address | IPv6Address) -> str:
     return str(resolver.query(addr, "PTR")[0])
 
 
-def get_ip_by_hostname(hostname: str, record_type: str = "A") -> IPv4Address | IPv6Address:
+def get_ip_by_hostname(
+    hostname: str, record_type: str = "A"
+) -> IPv4Address | IPv6Address:
+    """
+    Resolve DNS record of type `record_type` to ip address.
+
+    Parameters
+    ----------
+    hostname : str
+        fully qualified domain name
+    record_type : str, optional
+        DNS record type, by default "A"
+
+    Returns
+    -------
+    IPv4Address | IPv6Address
+        ipv4 if type "A", ipv6 if type "AAAA"
+    """
     return resolver.query(hostname, record_type)
 
 
@@ -58,7 +73,7 @@ def discover_replicas(settings: Settings) -> Dict[str, str]:
     envvar) and utilizing the [Docker DNS Services][0].
 
     [0]: https://docs.docker.com/config/containers/container-networking/#dns-services
-    
+
     Parameters
     ----------
     settings : Settings
@@ -73,7 +88,9 @@ def discover_replicas(settings: Settings) -> Dict[str, str]:
     ip_addresses = discover_by_dns(name)
     expected, got = settings.NUM_REPLICAS, len(ip_addresses)
     if got != expected:
-        logger.error("Number of found replicas does not match configured number: {expected} != {got}.")
+        logger.error(
+            "Number of found replicas does not match configured number: {expected} != {got}."
+        )
         raise RuntimeError(
             f"Critical Failure: Expected {expected} replicas, found {got}"
         )
@@ -85,6 +102,6 @@ def discover_replicas(settings: Settings) -> Dict[str, str]:
             fqdn = get_hostname_by_ip(address)
             replicas[fqdn] = address
 
-    print(f"OWN ADDRESS: {settings.HOSTNAME} :: {own_address}")
+    logger.debug(f"OWN ADDRESS: {settings.HOSTNAME} :: {own_address}")
 
     return {k: v for k, v in replicas.items() if v}
