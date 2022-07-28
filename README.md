@@ -7,12 +7,18 @@ new state is accepted as the state of a cluster of state machines, once a
 critical mass of particpating state machines have appended the new state to
 their logs.
 
+Raft is known for its implementation and usage in `etcd` and `k8s`, but also for
+the `hashicorp` implementation in Go and the `nebulaDB` project.
+
 ## Code
 
 The software used is based on ASGI + Starlette + FastAPI + Pydantic.
 
 In this Code Base, the [numpydoc v1.5.dev0 standard][npdoc] for Python
-docstrings is applied.
+docstrings is applied. Formatting was applied with [black][black].
+
+**Disclaimer**: I have worked with FastAPI for the past two years and
+**reused some of my own code** for this project.
 
 ### API-Design
 
@@ -84,3 +90,4 @@ Note that default values may be subject to change.
 
 [npdoc]: https://numpydoc.readthedocs.io/en/latest/format.html
 [raft-paper]: https://raft.github.io/
+[black]: https://github.com/psf/black

@@ -5,13 +5,13 @@ name = "pypi"
 
 [packages]
 cachetools = "*"
+dnspython = "*"
 fastapi = "*"
 python-jose = {extras = ["cryptography"], version = "*"}
+python-multipart = "*"
 requests = "*"
 structlog = "*"
 uvicorn = "*"
-python-multipart = "*"
-dnspython = "*"
 
 [dev-packages]
 bandit = "*"
