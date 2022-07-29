@@ -1,3 +1,4 @@
+"""Functions used for discovery of other services/replicas."""
 import logging
 from ipaddress import IPv4Address, IPv6Address
 from typing import Dict, List
@@ -78,7 +79,7 @@ def get_replica_name_by_hostname(hostname: str) -> str:
     str
         the replica name
     """
-    return get_hostname_by_ip(discover_by_dns(hostname)[0]).split(".")[0]
+    return get_hostname_by_ip(discover_by_dns(hostname)[0])
 
 
 def discover_replicas(app_name: str, hostname: str, nreplicas: int) -> Dict[str, str]:
@@ -112,9 +113,9 @@ def discover_replicas(app_name: str, hostname: str, nreplicas: int) -> Dict[str,
         logger.error(
             "Number of found replicas does not match configured number: {expected} != {got}."
         )
-        raise RuntimeError(
-            f"Critical Failure: Expected {expected} replicas, found {got}"
-        )
+        # raise RuntimeError(
+        #    f"Critical Failure: Expected {expected} replicas, found {got}"
+        # )
     # remove own address from that
     own_address = discover_by_dns(hostname)[0]
     replicas = {}
@@ -123,6 +124,6 @@ def discover_replicas(app_name: str, hostname: str, nreplicas: int) -> Dict[str,
             fqdn = get_hostname_by_ip(address)
             replicas[fqdn] = address
 
-    logger.debug(f"own id and address: {hostname=}, {own_address=}")
+    logger.debug("own id and address: %s, %s", hostname, own_address)
 
     return {k: v for k, v in replicas.items() if v}

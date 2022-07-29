@@ -1,12 +1,17 @@
+"""Entrypoint and setup functions.
+
+* FastAPI app factory
+* logging setup
+* start inital Raft thread
+
+"""
+
 import datetime
-from gc import get_referrers
 import logging
 import logging.config
 import random
 import sys
 
-import structlog
-import structlog._frames
 from fastapi import FastAPI
 from fastapi.applications import State as FastAPIState
 from fastapi.encoders import jsonable_encoder
@@ -17,10 +22,9 @@ from starlette.responses import JSONResponse
 from app.api.exceptions import ApiException, BadRequestException
 from app.api.models import ApiErrorResponse
 from app.api.v1.consensus_endpoints import consensus_router
-from app.api.v1.models import ReplicatedLog, State
 from app.config import Settings, get_settings
 from app.raft.discovery import discover_replicas, get_replica_name_by_hostname
-from app.raft.functions import FollowerExecutorThread
+from app.raft.functions import FollowerExecutorThread, State
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -47,50 +51,20 @@ def create_app(settings: Settings) -> FastAPI:
 
 
 def logging_setup(settings: Settings):
+    """
+    Set up python stdlib logging.
+
+    Parameters
+    ----------
+    settings : Settings
+        configuration object
+    """
     log_level = settings.LOGGING
 
     logging.basicConfig(format="%(message)s", stream=sys.stdout, level=log_level)
-    logger = logging.getLogger()
-    logger.setLevel(log_level)
+    lcl_logger = logging.getLogger()
+    lcl_logger.setLevel(log_level)
 
-    def add_app_context(logger, method_name, event_dict):
-        f, name = structlog._frames._find_first_app_frame_and_name(
-            ["logging", __name__]
-        )
-        event_dict["file"] = f.f_code.co_filename
-        event_dict["line"] = f.f_lineno
-        event_dict["function"] = f.f_code.co_name
-        return event_dict
-
-    structlog.configure(
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        processors=[
-            structlog.stdlib.filter_by_level,
-            structlog.stdlib.add_logger_name,
-            structlog.stdlib.add_log_level,
-            add_app_context,
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.JSONRenderer(indent=2, sort_keys=True),
-        ],
-    )
-    structlog.configure(
-        processors=[
-            structlog.contextvars.merge_contextvars,
-            structlog.stdlib.filter_by_level,
-            structlog.stdlib.add_logger_name,
-            structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.TimeStamper("iso", utc=True),
-            # structlog.processors.format_exc_info,
-            structlog.processors.UnicodeDecoder(),
-            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-        ],
-        wrapper_class=structlog.stdlib.AsyncBoundLogger,
-        context_class=dict,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
-    )
     logging.config.dictConfig(settings.LOGGING_CONFIG)
 
 
@@ -100,7 +74,6 @@ def raft_setup(state: FastAPIState, settings: Settings):
     state.id = settings.HOSTNAME  # own id
     state.state = State.FOLLOWER  # state of own state machine
     state.term = 0  # current term
-    state.log = ReplicatedLog()  # state of the current replicated log
     # discover other services
     state.replicas = discover_replicas(
         settings.APP_NAME, state.id, settings.NUM_REPLICAS
@@ -119,16 +92,17 @@ def raft_setup(state: FastAPIState, settings: Settings):
     state.leader = None  # id of the node that is leader
 
 
-settings: Settings = get_settings()
-app: FastAPI = create_app(settings)
-logging_setup(settings)
-raft_setup(app.state, settings)
-app.executor = FollowerExecutorThread()
-app.executor.start(app.state)
+app_settings: Settings = get_settings()
+app: FastAPI = create_app(app_settings)
+logging_setup(app_settings)
+logger = logging.getLogger(__name__)
+raft_setup(app.state, app_settings)
+app.executor = FollowerExecutorThread(args=(app.state,))
+app.executor.start()
 
 
 @app.exception_handler(ApiException)
-def api_exception_handler(request: Request, e: ApiException) -> JSONResponse:
+def api_exception_handler(request: Request, error: ApiException) -> JSONResponse:
     """
     Global FastAPI exception handler for base class of all informative
     exceptions (everything except 5xx). Whenever an ApiException is raised in a
@@ -139,7 +113,7 @@ def api_exception_handler(request: Request, e: ApiException) -> JSONResponse:
     ----------
     request
         The incoming HTTP request.
-    e
+    error
         The ApiException that got caught.
 
     Returns
@@ -147,19 +121,23 @@ def api_exception_handler(request: Request, e: ApiException) -> JSONResponse:
     JSONResponse
         The response to be sent.
     """
-    e.id = f"{settings.APP_NAME}.{e.id}"
+    error.id = f"{app_settings.APP_NAME}.{error.id}"
     json_compatible_response = jsonable_encoder(
-        ApiErrorResponse(error=e, apiVersion="1.0"), exclude_none=True
+        ApiErrorResponse(error=error, apiVersion="1.0"), exclude_none=True
     )
     # add raft info to error response
-    json_compatible_response["error"]["sender"] = request.app.state.id
+    json_compatible_response["error"]["sender"] = request.app.state.app_name
     json_compatible_response["error"]["term"] = request.app.state.term
-    response = JSONResponse(content=json_compatible_response, status_code=e.status_code)
+    json_compatible_response["error"]["id"] = request.app.state.id
+    response = JSONResponse(
+        content=json_compatible_response, status_code=error.status_code
+    )
     return response
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exception):
+    logger.warning("request validation exception: %s", str(exception))
     return api_exception_handler(
         request, BadRequestException(details={"errors": exception.errors()})
     )

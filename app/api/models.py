@@ -1,8 +1,9 @@
-from typing import Any, Dict, ForwardRef, TypeVar, Generic, List, Optional
-from pydantic import BaseModel, validator, Field
-from pydantic.generics import GenericModel
+"""API response models."""
 
-from app.api.exceptions import ApiException
+from typing import Any, Dict, Generic, List, Optional, TypeVar
+
+from pydantic import Field
+from pydantic.generics import GenericModel
 
 T = TypeVar("T")
 
