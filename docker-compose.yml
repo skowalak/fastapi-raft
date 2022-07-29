@@ -2,17 +2,32 @@ version: '3.8'
 
 services:
   node:
-    build: .
-      #    ports:
-      #      - 8001:8000
+    build:
+      context: .
+      dockerfile: app.Dockerfile
     environment:
       - APP_NAME=node
       - NUM_REPLICAS=3
     volumes:
       - .:/app
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 80
     deploy:
       replicas: 3
+    networks:
+      - election_net
+
+  monitor:  # loads a web page with an overview over all nodes
+    build:
+      context: .
+      dockerfile: monitor.Dockerfile
+    ports:
+      - 8000:8000
+    environment:
+      - MAIN_APP_NAME=node
+      - ADDRESS=localhost:8000
+    volumes:
+      - .:/app
+    command: uvicorn monitor.main:app --host 0.0.0.0 --port 8000
     networks:
       - election_net
 
