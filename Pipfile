@@ -9,6 +9,7 @@ fastapi = "*"
 requests = "*"
 structlog = "*"
 uvicorn = "*"
+jinja2 = "*"
 
 [dev-packages]
 bandit = "*"
