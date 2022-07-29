@@ -1,5 +1,5 @@
 [tool.bandit]
-exclude_dirs = ["app/tests/"]
+exclude_dirs = ["tests", "app/tests/"]
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -11,4 +11,3 @@ pythonpath = "/app/app"
 asyncio_mode = "auto"
 log_cli = true
 log_cli_level = "DEBUG"
-
