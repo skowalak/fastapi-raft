@@ -4,11 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-cachetools = "*"
 dnspython = "*"
 fastapi = "*"
-python-jose = {extras = ["cryptography"], version = "*"}
-python-multipart = "*"
 requests = "*"
 structlog = "*"
 uvicorn = "*"
@@ -18,9 +15,9 @@ bandit = "*"
 black = "*"
 flake8 = "*"
 mypy = "*"
-pdoc = "*"
 pytest = "*"
 pytest-asyncio = "*"
+pylint = "*"
 
 [requires]
 python_version = "3.10"
