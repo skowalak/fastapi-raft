@@ -1,5 +1,7 @@
 # Netzwerkprogrammierung SoSe2022 Abschlussprojekt
 
+###### Sebastian Kowalak, Matrikelnummer 2703855
+
 This project is an implementation of the `Raft` Consensus Algorithm, originally
 described in [this paper][raft-paper]. Raft creates a consensus about the state
 of a replicated _state machine_ using so-called _replicated logs_. This means, a
@@ -21,6 +23,17 @@ For a cool animated guide to Raft see [this page][raft-guide], and
   to become master
 * Failover, meaning nodes can disappear and reappear at any given time, or new
   nodes can be added to the group
+
+### Weaknesses of this implementation
+
+* I have not found an easy way to scale the replicas up, after the cluster has
+  already started.
+* In contrast to _real_ implementations of Raft, this one does not save the
+  entries of the replicated log. When a new log entry is committed, the old one
+  is lost.
+* This implementation assumes that all nodes that have a DNS entry, and all DNS
+  entries correspond to services. Services outside of that namespace can not be
+  considered.
 
 ## Code
 
@@ -51,11 +64,11 @@ managed using [`pipenv`][pipenv].
 
 * dnspython: Tools for use with Docker DNS
 * FastAPI: Web framework
+* Jinja2: Templating
 * Pydantic: JSON validation
 * Pytest: Testing
 * requests: HTTP library
 * Starlette: ASGI framework
-* structlog: Logging
 * uvicorn: ASGI web server
 
 ## Installation
@@ -115,9 +128,8 @@ In the `docker-compose.yaml` the two services are set up:
 * The Raft App itself is configured under the section `node`. To find the other
   replicas, the envvar `APP_NAME` is set to the service name `node`. For more
   information on configuration variables see [below](#configuration).
-* By default the Raft App is configured to run as 3 replicas. To change that
-  number, change it in the `deploy.replicas` section and pass the new value to
-  the service via the envvar `NUM_REPLICAS`.
+* By default the Raft App is configured to run as 7 replicas. To change that
+  number, change it in the `deploy.replicas` section.
 * The Monitor App is configured to open port `8000` and serve the information
   page on document root.
 * The Monitor App gets passed the service name of the Raft App via the
@@ -128,6 +140,12 @@ To run the example, `cd` into the project directory and run
 `docker-compose up --build`. When all services are started up, visit
 [http://localhost:8000/](http://localhost:8000) in a browser to view the status
 page.
+
+Service replicas can be paused using the `docker pause <container>` command. To
+resume a paused replica, use `docker unpause <container>`.
+
+To disable logging, set the envvar `LOGGING` to "ERROR" and restart. See
+`app/config.py` or [below](#configuration).
 
 ### Configuration
 
