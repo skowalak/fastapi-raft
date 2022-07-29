@@ -7,8 +7,9 @@ new state is accepted as the state of a cluster of state machines, once a
 critical mass of particpating state machines have appended the new state to
 their logs.
 
-Raft is known for its implementation and usage in `etcd` and `k8s`, but also for
-the `hashicorp` implementation in Go and the `nebulaDB` project.
+Raft is known for its implementation and usage in [`etcd`][etcd] and `k8s`, but
+also for the [`hashicorp` implementation in Go][hashicorp] and the
+[`nebulaDB`][nebuladb] project.
 
 ## Code
 
@@ -91,3 +92,8 @@ Note that default values may be subject to change.
 [npdoc]: https://numpydoc.readthedocs.io/en/latest/format.html
 [raft-paper]: https://raft.github.io/
 [black]: https://github.com/psf/black
+[etcd]: https://github.com/etcd-io/etcd
+[tikv]: https://github.com/tikv/tikv
+[rethinkdb]: https://github.com/rethinkdb/rethinkdb
+[nebuladb]: https://github.com/vesoft-inc/nebula
+[hashicorp]: https://github.com/hashicorp/raft

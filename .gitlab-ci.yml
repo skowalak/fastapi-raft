@@ -1,10 +1,6 @@
 stages:
   - test
 
-variables:
-  WORKON_HOME: .pipenv/venvs
-  PIP_CACHE_DIR: .pipenv/pipcache
-
 cache:
   key: pipenv
   paths:
@@ -12,6 +8,10 @@ cache:
 
 test_job:
   stage: test
+  variables:
+    WORKON_HOME: .pipenv/venvs
+    PIP_CACHE_DIR: .pipenv/pipcache
+
   image: python:3.10
   before_script:
     - python -m pip install --upgrade pipenv wheel
