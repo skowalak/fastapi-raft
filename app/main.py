@@ -1,25 +1,26 @@
+import datetime
+from gc import get_referrers
+import logging
+import logging.config
+import random
+import sys
+
+import structlog
+import structlog._frames
 from fastapi import FastAPI
 from fastapi.applications import State as FastAPIState
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.routing import APIRouter
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-import structlog
-import structlog._frames
-
-import logging
-import logging.config
-import sys
 
 from app.api.exceptions import ApiException, BadRequestException
-from app.api.models import ApiResponse, ApiErrorResponse
+from app.api.models import ApiErrorResponse
 from app.api.v1.consensus_endpoints import consensus_router
-from app.api.v1.health_endpoints import health_router
+from app.api.v1.models import ReplicatedLog, State
 from app.config import Settings, get_settings
-from app.raft.discovery import discover_replicas
-from app.raft.datastructures import ReplicatedLog, State
+from app.raft.discovery import discover_replicas, get_replica_name_by_hostname
+from app.raft.functions import FollowerExecutorThread
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -40,14 +41,7 @@ def create_app(settings: Settings) -> FastAPI:
         redoc_url=None,
         root_path=settings.ROOT_PATH,
     )
-    api_router = APIRouter()
-    """
-    Global API Router, parent to all version-specific routers under it.
-    """
-    api_router.include_router(consensus_router, prefix="/v1/raft", tags=["raft", "v1"])
-    api_router.include_router(health_router, prefix="/v1/health", tags=["health", "v1"])
-
-    lcl_app.include_router(api_router, prefix=settings.API_PREFIX)
+    lcl_app.include_router(consensus_router, prefix="/api/v1/raft", tags=["raft", "v1"])
 
     return lcl_app
 
@@ -102,24 +96,35 @@ def logging_setup(settings: Settings):
 
 def raft_setup(state: FastAPIState, settings: Settings):
     """Set values needed for Raft"""
+    state.app_name = get_replica_name_by_hostname(settings.HOSTNAME)
     state.id = settings.HOSTNAME  # own id
     state.state = State.FOLLOWER  # state of own state machine
     state.term = 0  # current term
     state.log = ReplicatedLog()  # state of the current replicated log
     # discover other services
-    state.replicas = discover_replicas(settings)
+    state.replicas = discover_replicas(
+        settings.APP_NAME, state.id, settings.NUM_REPLICAS
+    )
     if len(state.replicas) % 2 != 0:
         # there is an even number of nodes in the cluster (counting self) - this
         # can't work
         raise ValueError("Even number of nodes in cluster.")
     state.vote = None  # id of the node we voted for
-    state.leader = None  # id if the node that is leader
+    state.timeout = datetime.timedelta(
+        milliseconds=random.randrange(  # nosec (bandit: not used for security/crypto)
+            settings.ELECTION_TIMEOUT_LOWER_MILLIS,
+            settings.ELECTION_TIMEOUT_UPPER_MILLIS,
+        )
+    )
+    state.leader = None  # id of the node that is leader
 
 
 settings: Settings = get_settings()
 app: FastAPI = create_app(settings)
 logging_setup(settings)
 raft_setup(app.state, settings)
+app.executor = FollowerExecutorThread()
+app.executor.start(app.state)
 
 
 @app.exception_handler(ApiException)
@@ -146,6 +151,9 @@ def api_exception_handler(request: Request, e: ApiException) -> JSONResponse:
     json_compatible_response = jsonable_encoder(
         ApiErrorResponse(error=e, apiVersion="1.0"), exclude_none=True
     )
+    # add raft info to error response
+    json_compatible_response["error"]["sender"] = request.app.state.id
+    json_compatible_response["error"]["term"] = request.app.state.term
     response = JSONResponse(content=json_compatible_response, status_code=e.status_code)
     return response
 

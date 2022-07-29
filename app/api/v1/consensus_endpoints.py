@@ -82,7 +82,9 @@ async def request_vote(
         await logger.debug(f"current term {state.term} == {v_req.term}")
         if not state.vote or state.vote == v_req.sender:
             # we want to vote for this node
-            return V1ApiResponse(data=VoteResponseSchema(term=state.term))
+            return V1ApiResponse(
+                data=VoteResponseSchema(sender=state.id, term=state.term)
+            )
         else:
             # we do not want to vote for this node
             raise BadRequestException(message=f"Did not vote for {v_req.sender}.")
@@ -94,7 +96,7 @@ async def request_vote(
         background_tasks.add_task(functions.term_reset, state, v_req.term)
         state.vote = v_req.sender
 
-    return V1ApiResponse(data=VoteRequestSchema(term=state.term))
+    return V1ApiResponse(data=VoteResponseSchema(sender=state.id, term=state.term))
 
 
 @consensus_router.post("/log")
@@ -133,4 +135,4 @@ async def append_log(
         background_tasks.add_task(functions.term_reset, state, l_req.term)
         state.leader = l_req.sender
 
-    return V1ApiResponse(data=HeartbeatResponseSchema(term=state.term))
+    return V1ApiResponse(data=HeartbeatResponseSchema(sender=state.id, term=state.term))

@@ -2,7 +2,6 @@ import logging
 from ipaddress import IPv4Address, IPv6Address
 from typing import Dict, List
 
-from app.config import Settings
 from dns import resolver, reversename
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -44,7 +43,7 @@ def get_ip_by_hostname(
     IPv4Address | IPv6Address
         ipv4 if type "A", ipv6 if type "AAAA"
     """
-    return resolver.query(hostname, record_type)
+    return resolver.resolve(hostname, record_type)
 
 
 def discover_by_dns(name: str) -> List[IPv4Address]:
@@ -65,7 +64,24 @@ def discover_by_dns(name: str) -> List[IPv4Address]:
     return [IPv4Address(ip) for ip in get_ip_by_hostname(name)]
 
 
-def discover_replicas(settings: Settings) -> Dict[str, str]:
+def get_replica_name_by_hostname(hostname: str) -> str:
+    """
+    Return the human-readable replica name, e.g. node_1
+
+    Parameters
+    ----------
+    hostname : str
+        auto-generated hostname passed to service by docker
+
+    Returns
+    -------
+    str
+        the replica name
+    """
+    return get_hostname_by_ip(discover_by_dns(hostname)[0]).split(".")[0]
+
+
+def discover_replicas(app_name: str, hostname: str, nreplicas: int) -> Dict[str, str]:
     """
     Discover all replicas of this service in the same Docker network.
 
@@ -76,17 +92,22 @@ def discover_replicas(settings: Settings) -> Dict[str, str]:
 
     Parameters
     ----------
-    settings : Settings
-        configuration options passed to instance
+    app_name : str
+        name of the app shared by all instances
+
+    hostname : str
+        own hostname to lookup which of the nodes we are.
+
+    nreplicas : int
+        number of replicas, that can at most be discovered
 
     Returns
     -------
     Dict[str, str]
         Map domain names of replicas to their IP addresses.
     """
-    name = settings.APP_NAME
-    ip_addresses = discover_by_dns(name)
-    expected, got = settings.NUM_REPLICAS, len(ip_addresses)
+    ip_addresses = discover_by_dns(app_name)
+    expected, got = nreplicas, len(ip_addresses)
     if got != expected:
         logger.error(
             "Number of found replicas does not match configured number: {expected} != {got}."
@@ -95,13 +116,13 @@ def discover_replicas(settings: Settings) -> Dict[str, str]:
             f"Critical Failure: Expected {expected} replicas, found {got}"
         )
     # remove own address from that
-    own_address = discover_by_dns(settings.HOSTNAME)[0]
+    own_address = discover_by_dns(hostname)[0]
     replicas = {}
     for address in ip_addresses:
         if not address == own_address:
             fqdn = get_hostname_by_ip(address)
             replicas[fqdn] = address
 
-    logger.debug(f"OWN ADDRESS: {settings.HOSTNAME} :: {own_address}")
+    logger.debug(f"own id and address: {hostname=}, {own_address=}")
 
     return {k: v for k, v in replicas.items() if v}
