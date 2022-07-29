@@ -11,6 +11,9 @@ Raft is known for its implementation and usage in [`etcd`][etcd] and `k8s`, but
 also for the [`hashicorp` implementation in Go][hashicorp] and the
 [`nebulaDB`][nebuladb] project.
 
+For a cool animated guide to Raft see [this page][raft-guide], and
+[this video][raft-video] is a talk by one of Raft's creators.
+
 ## Assignment
 
 * Implementation of a leader election algorithm using a quorum, meaning more
@@ -149,6 +152,8 @@ Note that default values may be subject to change.
 
 [npdoc]: https://numpydoc.readthedocs.io/en/latest/format.html
 [raft-paper]: https://raft.github.io/
+[raft-guide]: https://thesecretlivesofdata.com/raft/
+[raft-video]: https://www.youtube.com/watch?v=vYp4LYbnnW8
 [black]: https://github.com/psf/black
 [etcd]: https://github.com/etcd-io/etcd
 [tikv]: https://github.com/tikv/tikv
