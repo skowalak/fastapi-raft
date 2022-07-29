@@ -11,7 +11,7 @@ class TestRaftFunctions:
     @pytest.mark.asyncio
     async def test_term_reset_case_candidate(self):
         # setup
-        from app.api.v1.models import State
+        from app.raft.functions import State
 
         test_time = datetime.datetime.utcnow()
         state = FastAPIState()
@@ -35,7 +35,7 @@ class TestRaftFunctions:
     @mock.patch(follower_executor_thread)
     async def test_term_reset_case_leader(self, mock):
         # setup
-        from app.api.v1.models import State
+        from app.raft.functions import State
 
         test_time = datetime.datetime.utcnow()
         state = FastAPIState()
@@ -57,7 +57,7 @@ class TestRaftFunctions:
     @pytest.mark.asyncio
     async def test_term_reset_case_follower(self):
         # setup
-        from app.api.v1.models import State
+        from app.raft.functions import State
 
         test_time = datetime.datetime.utcnow()
         state = FastAPIState()
