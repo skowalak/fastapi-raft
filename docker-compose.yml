@@ -7,12 +7,11 @@ services:
       dockerfile: app.Dockerfile
     environment:
       - APP_NAME=node
-      - NUM_REPLICAS=3
     volumes:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 80
     deploy:
-      replicas: 3
+      replicas: 7
     networks:
       - election_net
 

@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 os.environ.update(
     {
         "HOSTNAME": "asdfghjkl",
-        "NUM_REPLICAS": "1",
     }
 )
 
