@@ -1,16 +1,18 @@
-from typing import Dict, Generic, TypeVar
+import collections
+import dataclasses
+import enum
+from typing import Generic, TypeVar
 
 from app.api.models import ApiErrorResponse, ApiResponse
 from app.config import get_settings
 from pydantic import BaseModel, Field
-
 
 settings = get_settings()
 T = TypeVar("T")
 
 
 class RaftMessageSchema(BaseModel):
-    sender_id: str = Field(default=settings.HOSTNAME)
+    sender: str = Field(default=settings.HOSTNAME)
     term: int = Field(...)
 
 
@@ -22,12 +24,43 @@ class VoteResponseSchema(RaftMessageSchema):
     pass
 
 
-class AppendLogRequestSchema(RaftMessageSchema):
+class HeartbeatRequestSchema(RaftMessageSchema):
     pass
 
 
-class AppendLogResponseSchema(RaftMessageSchema):
+class HeartbeatResponseSchema(RaftMessageSchema):
     pass
+
+
+class State(enum.Enum):
+    FOLLOWER = "FOLLOWER"
+    CANDIDATE = "CANDIDATE"
+    LEADER = "LEADER"
+
+
+class ReplicatedLog(collections.UserList):
+    """
+    The replicated log Raft uses for cluster consensus
+
+    Inherits
+    --------
+    collections.UserList
+        A fancy way to say inherit from list (which is not possible)
+    """
+
+    pass
+
+
+@dataclasses.dataclass
+class RaftStateException(Exception):
+    id: str = "RAFT_STATE_EXCEPTION"
+
+
+class RaftStatusResponseSchema(BaseModel):
+    app_name: str
+    id: str
+    state: str
+    term: int
 
 
 class V1ApiResponse(ApiResponse[T], Generic[T]):
