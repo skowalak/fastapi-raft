@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     FASTAPI_DOCS: str = "/docs"
     API_PREFIX: str = "/api"
 
-    ROOT_PATH: str = "/ccs"
+    ROOT_PATH: str = ""
     APP_NAME: str = "consensus-cluster-service"
     LOGGING: str = "DEBUG"
 
@@ -51,8 +51,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "changeme"
 
     ### RAFT SPECIFIC SETTINGS ###
-    ELECTION_TIMEOUT_LOWER_MILLIS = 150
-    ELECTION_TIMEOUT_UPPER_MILLIS = 300
+    ELECTION_TIMEOUT_LOWER_MILLIS = 1500
+    ELECTION_TIMEOUT_UPPER_MILLIS = 3000
 
     LOGGING_CONFIG: Dict = {
         "version": 1,
