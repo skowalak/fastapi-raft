@@ -61,7 +61,7 @@ directory. **The easiest way to run them is using
 [`gitlab-runner`](https://docs.gitlab.com/runner/install/) with:**
 
 ``` sh
-$ gitlab-runner exec docker test
+$ gitlab-runner exec docker test_job
 ```
 
 If you cannot run `gitlab-runner`, you can run them locally with `pipenv run
