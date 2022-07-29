@@ -75,9 +75,7 @@ def raft_setup(state: FastAPIState, settings: Settings):
     state.state = State.FOLLOWER  # state of own state machine
     state.term = 0  # current term
     # discover other services
-    state.replicas = discover_replicas(
-        settings.APP_NAME, state.id, settings.NUM_REPLICAS
-    )
+    state.replicas = discover_replicas(settings.APP_NAME, state.id)
     if len(state.replicas) % 2 != 0:
         # there is an even number of nodes in the cluster (counting self) - this
         # can't work

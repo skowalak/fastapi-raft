@@ -64,6 +64,8 @@ class CandidateExecutorThread(StateExecutorThread):
     def run(self) -> None:
         state = self._args[0]
         state.state = State.CANDIDATE
+        state.possible_voters = state.replicas.copy()
+        state.actual_voters = []
         if state.replicas:
             state.term += 1
             state.vote = state.id
@@ -123,8 +125,11 @@ def be_candidate(state: FastAPIState) -> None:
     RaftStateException
         when candidature needs to be ended (i.e. becoming leader next)
     """
-    vote_for = state.replicas.copy()
-    for replica, _ in vote_for.items():
+    for replica in state.possible_voters.keys():
+        if replica in state.actual_voters:
+            # already voted for us, skip
+            continue
+
         # ask replica to vote for us
         try:
             response = requests.put(
@@ -137,7 +142,7 @@ def be_candidate(state: FastAPIState) -> None:
         response_data = response.json()
         if response.status_code == HTTPStatus.OK:
             # we got a vote
-            del vote_for[replica]
+            state.actual_voters.append(replica)
             state.my_votes += 1
             if state.my_votes > len(state.replicas) // 2:
                 # we have the majority

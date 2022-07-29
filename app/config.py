@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     """
 
     HOSTNAME: str  # set by docker
-    NUM_REPLICAS: int  # set by docker
 
     FASTAPI_TITLE: str = "Consensus Cluster Service"
     FASTAPI_MAINT: str = "Sebastian Kowalak"

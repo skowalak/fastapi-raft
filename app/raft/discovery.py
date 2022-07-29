@@ -82,7 +82,7 @@ def get_replica_name_by_hostname(hostname: str) -> str:
     return get_hostname_by_ip(discover_by_dns(hostname)[0])
 
 
-def discover_replicas(app_name: str, hostname: str, nreplicas: int) -> Dict[str, str]:
+def discover_replicas(app_name: str, hostname: str) -> Dict[str, str]:
     """
     Discover all replicas of this service in the same Docker network.
 
@@ -99,23 +99,12 @@ def discover_replicas(app_name: str, hostname: str, nreplicas: int) -> Dict[str,
     hostname : str
         own hostname to lookup which of the nodes we are.
 
-    nreplicas : int
-        number of replicas, that can at most be discovered
-
     Returns
     -------
     Dict[str, str]
         Map domain names of replicas to their IP addresses.
     """
     ip_addresses = discover_by_dns(app_name)
-    expected, got = nreplicas, len(ip_addresses)
-    if got != expected:
-        logger.error(
-            "Number of found replicas does not match configured number: {expected} != {got}."
-        )
-        # raise RuntimeError(
-        #    f"Critical Failure: Expected {expected} replicas, found {got}"
-        # )
     # remove own address from that
     own_address = discover_by_dns(hostname)[0]
     replicas = {}
@@ -123,6 +112,8 @@ def discover_replicas(app_name: str, hostname: str, nreplicas: int) -> Dict[str,
         if not address == own_address:
             fqdn = get_hostname_by_ip(address)
             replicas[fqdn] = address
+
+    # TODO: (skowalak) ping every node to know if it is online
 
     logger.debug("own id and address: %s, %s", hostname, own_address)
 
