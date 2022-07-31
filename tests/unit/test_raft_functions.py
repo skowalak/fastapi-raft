@@ -57,7 +57,6 @@ class TestRaftFunctions:
         # setup
         from app.raft.functions import State
 
-        test_time = datetime.datetime.utcnow()
         state = FastAPIState()
         state.term = 0
         state.state = State.FOLLOWER
@@ -65,11 +64,10 @@ class TestRaftFunctions:
         # execution
         from app.raft.functions import term_reset
 
-        term_reset(state, 1)
+        term_reset(state, 1, state.state)
 
         # test
         assert state.state is State.FOLLOWER
-        assert state.ping_time != test_time
         assert state.term == 1
 
     @pytest.mark.asyncio
@@ -85,7 +83,7 @@ class TestRaftFunctions:
         # execute
         from app.raft.functions import term_reset
 
-        term_reset(state, 1)
+        term_reset(state, 1, state.state)
 
         # test
         assert state.term == 1
@@ -93,7 +91,7 @@ class TestRaftFunctions:
 
     @pytest.mark.asyncio
     @mock.patch("app.raft.functions.reset_leader")
-    async def test_term_reset_call_candidate(self, mock_leader: mock.Mock):
+    async def test_term_reset_call_leader(self, mock_leader: mock.Mock):
         # setup
         from app.raft.functions import State
 
@@ -104,7 +102,7 @@ class TestRaftFunctions:
         # execute
         from app.raft.functions import term_reset
 
-        term_reset(state, 1)
+        term_reset(state, 1, state.state)
 
         # test
         assert state.term == 1
