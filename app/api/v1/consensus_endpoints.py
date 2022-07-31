@@ -5,9 +5,10 @@
 * append log / send heartbeat
 
 """
+import datetime
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, Request
 
 from app.api.exceptions import BadRequestException
 from app.api.v1.models import (
@@ -51,9 +52,7 @@ async def get_state(request: Request):
 
 
 @consensus_router.put("/vote")
-async def request_vote(
-    request: Request, v_req: RaftMessageSchema, background_tasks: BackgroundTasks
-):
+async def request_vote(request: Request, v_req: RaftMessageSchema):
     """
     Request a vote from this node.
 
@@ -75,11 +74,11 @@ async def request_vote(
     else:
         # We do not know this node (not discovered)
         logger.info("reject unknown node %s", v_req.sender)
-        # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
+        # mypy problems with pydantic.dataclasses, so disabling the type check for this instance
         raise BadRequestException(message=f"Node app_name {v_req.sender} unknown.")  # type: ignore
 
     # check if term is correct
-    if state.term > v_req.term:
+    if v_req.term < state.term:
         # requests term is out of date, rejecting
         logger.info("reject outdated term (%s) vote request", v_req.term)
         # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
@@ -93,10 +92,10 @@ async def request_vote(
             return V1ApiResponse(data=RaftMessageSchema.from_state_object(state))
 
         # we do not want to vote for this node
-        # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
+        # mypy problems with pydantic.dataclasses, so disabling the type check for this instance
         raise BadRequestException(message=f"Did not vote for {v_req.sender}.")  # type: ignore
 
-    if state.term < v_req.term:
+    if v_req.term > state.term:
         # own term is outdated
         logger.info(
             "term %s out of date by %s",
@@ -104,16 +103,14 @@ async def request_vote(
             (v_req.term - state.term),
         )
         # if leader, step down, then vote
-        background_tasks.add_task(functions.term_reset, state, v_req.term)
+        functions.term_reset(state, v_req.term, state.state)
         state.vote = v_req.sender
 
     return V1ApiResponse(data=RaftMessageSchema.from_state_object(state))
 
 
 @consensus_router.post("/log")
-async def append_log(
-    request: Request, l_req: RaftMessageSchema, background_tasks: BackgroundTasks
-):
+async def append_log(request: Request, l_req: RaftMessageSchema):
     """
     Append an entry to this nodes log. In Raft terms this may also be called a _heartbeat_.
 
@@ -134,7 +131,7 @@ async def append_log(
     else:
         # we do not know this node
         logger.info("reject unknown node %s", l_req.sender)
-        # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
+        # mypy problems with pydantic.dataclasses, so disabling the type check for this instance
         raise BadRequestException(message=f"Node ID {l_req.sender} unknown.")  # type: ignore
 
     # check if term is correct
@@ -145,7 +142,8 @@ async def append_log(
         raise BadRequestException(message=f"Outdated term: {l_req.term}")  # type: ignore
 
     # term is current or newer
-    background_tasks.add_task(functions.term_reset, state, l_req.term)
+    state.ping_time = datetime.datetime.utcnow()
+    functions.term_reset(state, l_req.term, state.state)
     state.leader = l_req.sender
 
     return V1ApiResponse(data=RaftMessageSchema.from_state_object(state))

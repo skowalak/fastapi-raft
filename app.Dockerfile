@@ -10,8 +10,9 @@ RUN pip install --upgrade pip
 RUN pip install pipenv
 RUN pipenv install --dev --system --deploy --ignore-pipfile
 
-# migrations
-COPY pyproject.toml .
+# scripts
+COPY script_leader.sh .
+COPY script_follower.sh .
 
 COPY app/ ./app
 

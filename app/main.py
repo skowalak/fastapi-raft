@@ -73,6 +73,8 @@ def raft_setup(state: FastAPIState, settings: Settings):
     state.app_name = get_replica_name_by_hostname(settings.HOSTNAME)
     state.id = settings.HOSTNAME  # own id
     state.state = State.FOLLOWER  # state of own state machine
+    state.leader_script = settings.SCRIPT_LEADER_PATH
+    state.follower_script = settings.SCRIPT_FOLLOWER_PATH
     state.term = 0  # current term
     # discover other services
     state.replicas = discover_replicas(settings.APP_NAME, state.id)

@@ -2,6 +2,7 @@
 import datetime
 import enum
 import logging
+import subprocess
 import threading
 from http import HTTPStatus
 
@@ -54,6 +55,8 @@ class FollowerExecutorThread(StateExecutorThread):
         state = self._args[0]
         state.state = State.FOLLOWER
         state.ping_time = datetime.datetime.utcnow()
+        # run payload follower script
+        subprocess.Popen(["/bin/sh", state.follower_script])
         while not self._stop_evt.wait(timeout=state.heartbeat_repeat):
             be_follower(state)
 
@@ -87,6 +90,8 @@ class LeaderExecutorThread(StateExecutorThread):
     def run(self) -> None:
         state = self._args[0]
         state.state = State.LEADER
+        # run payload leader script
+        subprocess.Popen(["/bin/sh", state.leader_script])
         while not self._stop_evt.wait(timeout=state.heartbeat_repeat):
             try:
                 be_leader(state)
@@ -189,6 +194,7 @@ def be_leader(state: FastAPIState) -> None:
             continue
         response_data = response.json()
         if response.status_code != HTTPStatus.OK:
+            logger.info("leader got newer term, resetting")
             if state.term < response_data["error"]["term"]:
                 term_reset(state, response_data["error"]["term"])
 
@@ -205,7 +211,6 @@ def reset_candidate(state: FastAPIState) -> None:
     # stop running election
     if state.candidature.is_alive():
         state.candidature.stop()
-        state.candidature.join()
     state.ping_time = datetime.datetime.utcnow()
     state.state = State.FOLLOWER  # now we are only a follower
 
@@ -221,13 +226,14 @@ def reset_leader(state: FastAPIState) -> None:
     """
     if state.executor.is_alive():
         state.executor.stop()  # stop leadership
-        state.executor.join()  # wait for stop
     state.state = State.FOLLOWER
     state.executor = FollowerExecutorThread(args=(state,))
     state.executor.start()  # start becoming a follower
 
 
-def term_reset(state: FastAPIState, next_term: int) -> None:
+def term_reset(
+    state: FastAPIState, next_term: int, current_role: State = State.FOLLOWER
+) -> None:
     """
     Handles a term reset / a term update
 
@@ -235,14 +241,18 @@ def term_reset(state: FastAPIState, next_term: int) -> None:
     ----------
     state : FastAPIState
         global state object
+
+    next_term : int
+        the received term
+
+    current_role : State
+        the role, this reset was triggered in
     """
     logger.debug("resetting current term: %s", state.term)
     if next_term > state.term:
         logger.debug("term update: %s -> %s", state.term, next_term)
     state.term = next_term
-    if state.state is State.CANDIDATE:
+    if current_role is State.CANDIDATE:
         reset_candidate(state)
-    elif state.state is State.LEADER:
+    elif current_role is State.LEADER:
         reset_leader(state)
-    elif state.state is State.FOLLOWER:
-        state.ping_time = datetime.datetime.utcnow()
