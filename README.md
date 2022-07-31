@@ -24,7 +24,7 @@ For a cool animated guide to Raft see [this page][raft-guide], and
 * Failover, meaning nodes can disappear and reappear at any given time, or new
   nodes can be added to the group
 
-### Weaknesses of this implementation
+### Weaknesses / Caveats of this implementation
 
 * I have not found an easy way to scale the replicas up, after the cluster has
   already started.
@@ -34,6 +34,10 @@ For a cool animated guide to Raft see [this page][raft-guide], and
 * This implementation assumes that all nodes that have a DNS entry, and all DNS
   entries correspond to services. Services outside of that namespace can not be
   considered.
+* Sometimes a leader will lose its leader status, because pinging every node
+  with a heartbeat was too slow (request timeout), and that node increased its
+  term, effectively resetting the leader. Usually the leader will regain its
+  status in the next term.
 
 ## Code
 
@@ -117,6 +121,15 @@ Another small FastAPI webservice is contained in the directory `monitor/`. Its
 purpose is to collect status data from all replicas of the main `app` and
 display it on a webpage.
 
+## Payload configuration
+
+A payload to be executed when the service is leader and/or follower is can be
+configured by copying a shell script into the service container. By default, the
+two scripts `script_follower.sh` and `script_leader.sh` are used. These scripts
+will be executed, whenever a Node changes into leader / follower role. To use a
+different script, adjust the `app.Dockerfile` and set the appropriate
+configuration variables (See [configuration variables table](#configuration)).
+
 ### Example
 
 The repo contains two `Dockerfiles`. `app.Dockerfile` is the Docker
@@ -136,13 +149,21 @@ In the `docker-compose.yaml` the two services are set up:
   `MAIN_APP_NAME` envvar and its own port and bind address via `ADDRESS`.
   These config options can be reviewed in `monitor/main.py`.
 
-To run the example, `cd` into the project directory and run
-`docker-compose up --build`. When all services are started up, visit
+To run the example, `cd` into the project directory and run the docker compose definition with:
+
+``` sh
+docker-compose up --build
+```
+
+When all services are started up, visit
 [http://localhost:8000/](http://localhost:8000) in a browser to view the status
-page.
+page. **The monitor webpage may lag behind and show a leader node still as candidate.**
+
+![screenshot](screenshot.png){: shadow}
 
 Service replicas can be paused using the `docker pause <container>` command. To
-resume a paused replica, use `docker unpause <container>`.
+resume a paused replica, use `docker unpause <container>`. For a list of running
+replicas, use the `docker ps` command.
 
 To disable logging, set the envvar `LOGGING` to "ERROR" and restart. See
 `app/config.py` or [below](#configuration).
@@ -161,11 +182,24 @@ Note that default values may be subject to change.
 | FASTAPI_SCHEM                     | The path where the OpenAPI schema is available. | `/openapi.json` |
 | FASTAPI_DOCS                      | The path where SwaggerDoc is available. | `/docs` |
 | API_PREFIX                        | Path prefixed before all API-routes | `/api` |
-| ROOT_PATH                         | Path where uvicorn will serve the app. | `` |
+| ROOT_PATH                         | Path where uvicorn will serve the app. | ` ` |
 | APP_NAME                          | Name of the application (will be used in error messages e.g.) | `consensus-cluster-service` |
 | LOGGING                           | Logging level | `DEBUG` |
-| ELECTION_TIMEOUT_LOWER_MILLIS     | Lower bound for election timeout in milliseconds | 150 |
-| ELECTION_TIMEOUT_UPPER_MILLIS     | Upper bound for election timeout in milliseconds | 300 |
+| ELECTION_TIMEOUT_LOWER_MILLIS     | Lower bound for election timeout in milliseconds | `3000` |
+| ELECTION_TIMEOUT_UPPER_MILLIS     | Upper bound for election timeout in milliseconds | `5000` |
+| HEARTBEAT_REPEAT_MILLIS           | How fast a Leader will send heartbeats to all nodes | `500` |
+| SCRIPT_LEADER_PATH                | Location of script to be run when leader | unset |
+| SCRIPT_FOLLOWER_PATH              | Location of script to be run when follower | unset |
+
+The Monitor can be configured with these variables:
+
+| Environment Variable              | Description | Default Value |
+|:----------------------------------|:------------|--------------:|
+| RAFT_SERVICE_NAME | Name of the main Service implementing raft | unset |
+| BIND_HOST | Address under which the monitor is available | unset |
+| TEMPLATES_DIR | directory in which jinja2 templates are | unset |
+| REFRESH_RATE_MILLIS | how often to refresh service status | unset |
+| HOSTNAME | set by docker, container name | unset |
 
 
 [npdoc]: https://numpydoc.readthedocs.io/en/latest/format.html
