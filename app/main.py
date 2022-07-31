@@ -95,8 +95,8 @@ app: FastAPI = create_app(app_settings)
 logging_setup(app_settings)
 logger = logging.getLogger(__name__)
 raft_setup(app.state, app_settings)
-app.executor = FollowerExecutorThread(args=(app.state,))
-app.executor.start()
+app.state.executor = FollowerExecutorThread(args=(app.state,))
+app.state.executor.start()
 
 
 @app.exception_handler(ApiException)

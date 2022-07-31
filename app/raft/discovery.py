@@ -8,13 +8,13 @@ from dns import resolver, reversename
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def get_hostname_by_ip(address: IPv4Address | IPv6Address) -> str:
+def get_hostname_by_ip(address: str) -> str:
     """
     Reverse-lookup an IP-Address to get its corresponding hostname
 
     Parameters
     ----------
-    address : IPv4Address | IPv6Address
+    address : str
         address to be looked up
 
     Returns
@@ -22,13 +22,11 @@ def get_hostname_by_ip(address: IPv4Address | IPv6Address) -> str:
     str
         hostname if successful
     """
-    addr = reversename.from_address(str(address))
-    return str(resolver.query(addr, "PTR")[0])
+    reverse_name = reversename.from_address(address)
+    return str(resolver.resolve(str(reverse_name), "PTR")[0])
 
 
-def get_ip_by_hostname(
-    hostname: str, record_type: str = "A"
-) -> IPv4Address | IPv6Address:
+def get_ip_by_hostname(hostname: str, record_type: str = "A") -> resolver.Answer:
     """
     Resolve DNS record of type `record_type` to ip address.
 
@@ -41,13 +39,13 @@ def get_ip_by_hostname(
 
     Returns
     -------
-    IPv4Address | IPv6Address
-        ipv4 if type "A", ipv6 if type "AAAA"
+    resolver.Answer
+        Iterable, ipv4 if type "A", ipv6 if type "AAAA"
     """
     return resolver.resolve(hostname, record_type)
 
 
-def discover_by_dns(name: str) -> List[IPv4Address]:
+def discover_by_dns(name: str) -> List[str]:
     """
     Use docker builtin DNS capability to find other replicas.
 
@@ -59,10 +57,10 @@ def discover_by_dns(name: str) -> List[IPv4Address]:
 
     Returns
     -------
-    List[IPv4Address]
+    List[str]
         list of ip addresses of all replicas.
     """
-    return [IPv4Address(ip) for ip in get_ip_by_hostname(name)]
+    return [str(ip) for ip in get_ip_by_hostname(name)]
 
 
 def get_replica_name_by_hostname(hostname: str) -> str:
@@ -106,7 +104,7 @@ def discover_replicas(app_name: str, hostname: str) -> Dict[str, str]:
     """
     ip_addresses = discover_by_dns(app_name)
     # remove own address from that
-    own_address = discover_by_dns(hostname)[0]
+    own_address = str(get_ip_by_hostname(hostname)[0])
     replicas = {}
     for address in ip_addresses:
         if not address == own_address:
@@ -117,4 +115,4 @@ def discover_replicas(app_name: str, hostname: str) -> Dict[str, str]:
 
     logger.debug("own id and address: %s, %s", hostname, own_address)
 
-    return {k: v for k, v in replicas.items() if v}
+    return {k: str(v) for k, v in replicas.items() if v}

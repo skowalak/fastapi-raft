@@ -234,7 +234,9 @@ def term_reset(state: FastAPIState, next_term: int) -> None:
     state : FastAPIState
         global state object
     """
-    logger.debug("term update: %s -> %s", state.term, next_term)
+    logger.debug("resetting current term: %s", state.term)
+    if next_term > state.term:
+        logger.debug("term update: %s -> %s", state.term, next_term)
     state.term = next_term
     if state.state is State.CANDIDATE:
         reset_candidate(state)

@@ -75,13 +75,15 @@ async def request_vote(
     else:
         # We do not know this node (not discovered)
         logger.info("reject unknown node %s", v_req.sender)
-        raise BadRequestException(message=f"Node app_name {v_req.sender} unknown.")
+        # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
+        raise BadRequestException(message=f"Node app_name {v_req.sender} unknown.")  # type: ignore
 
     # check if term is correct
     if state.term > v_req.term:
         # requests term is out of date, rejecting
         logger.info("reject outdated term (%s) vote request", v_req.term)
-        raise BadRequestException(message=f"Outdated term: {v_req.term}.")
+        # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
+        raise BadRequestException(message=f"Outdated term: {v_req.term}.")  # type: ignore
 
     if state.term == v_req.term:
         # terms match
@@ -91,7 +93,8 @@ async def request_vote(
             return V1ApiResponse(data=RaftMessageSchema.from_state_object(state))
 
         # we do not want to vote for this node
-        raise BadRequestException(message=f"Did not vote for {v_req.sender}.")
+        # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
+        raise BadRequestException(message=f"Did not vote for {v_req.sender}.")  # type: ignore
 
     if state.term < v_req.term:
         # own term is outdated
@@ -131,13 +134,15 @@ async def append_log(
     else:
         # we do not know this node
         logger.info("reject unknown node %s", l_req.sender)
-        raise BadRequestException(message=f"Node ID {l_req.sender} unknown.")
+        # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
+        raise BadRequestException(message=f"Node ID {l_req.sender} unknown.")  # type: ignore
 
     # check if term is correct
     if state.term > l_req.term:
         # term out of date, rejecting
         logger.info("reject outdated term %s log append", l_req.term)
-        raise BadRequestException(message=f"Outdated term: {l_req.term}")
+        # mypy has problems with pydantic.dataclasses, so I am disabling the type check for this instance
+        raise BadRequestException(message=f"Outdated term: {l_req.term}")  # type: ignore
 
     # term is current or newer
     background_tasks.add_task(functions.term_reset, state, l_req.term)
