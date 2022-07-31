@@ -38,6 +38,7 @@ For a cool animated guide to Raft see [this page][raft-guide], and
   with a heartbeat was too slow (request timeout), and that node increased its
   term, effectively resetting the leader. Usually the leader will regain its
   status in the next term.
+  * This instability becomes more severe, when upscaling the service.
 
 ## Code
 
@@ -141,7 +142,7 @@ In the `docker-compose.yaml` the two services are set up:
 * The Raft App itself is configured under the section `node`. To find the other
   replicas, the envvar `APP_NAME` is set to the service name `node`. For more
   information on configuration variables see [below](#configuration).
-* By default the Raft App is configured to run as 7 replicas. To change that
+* By default the Raft App is configured to run as 3 replicas. To change that
   number, change it in the `deploy.replicas` section.
 * The Monitor App is configured to open port `8000` and serve the information
   page on document root.

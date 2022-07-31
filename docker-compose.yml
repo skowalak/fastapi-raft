@@ -13,7 +13,7 @@ services:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 80
     deploy:
-      replicas: 7
+      replicas: 3
     networks:
       - election_net
 
@@ -28,7 +28,7 @@ services:
       - BIND_HOST=localhost
       - BIND_PORT=8000
       - TEMPLATES_DIR=/app/monitor/templates/
-      - REFRESH_RATE_MILLIS=5000
+      - REFRESH_RATE_MILLIS=1000
     volumes:
       - .:/app
     command: uvicorn monitor.main:app --host 0.0.0.0 --port 8000
