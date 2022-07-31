@@ -160,7 +160,7 @@ When all services are started up, visit
 [http://localhost:8000/](http://localhost:8000) in a browser to view the status
 page. **The monitor webpage may lag behind and show a leader node still as candidate.**
 
-![screenshot](screenshot.png){: .shadow}
+![screenshot](screenshot.png)
 
 Service replicas can be paused using the `docker pause <container>` command. To
 resume a paused replica, use `docker unpause <container>`. For a list of running
