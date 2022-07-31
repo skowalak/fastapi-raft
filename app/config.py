@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     ### RAFT SPECIFIC SETTINGS ###
     ELECTION_TIMEOUT_LOWER_MILLIS = 1500
     ELECTION_TIMEOUT_UPPER_MILLIS = 3000
+    HEARTBEAT_REPEAT_MILLIS = 500
 
     LOGGING_CONFIG: Dict = {
         "version": 1,

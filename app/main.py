@@ -87,6 +87,9 @@ def raft_setup(state: FastAPIState, settings: Settings):
             settings.ELECTION_TIMEOUT_UPPER_MILLIS,
         )
     )
+    state.heartbeat_repeat = (
+        settings.HEARTBEAT_REPEAT_MILLIS / 1000
+    )  # need to be float seconds
     state.leader = None  # id of the node that is leader
 
 
@@ -135,6 +138,20 @@ def api_exception_handler(request: Request, error: ApiException) -> JSONResponse
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exception):
+    """Redirect pydantic validation errors to main error handler
+
+    Parameters
+    ----------
+    request : Request
+        The request that caused the error
+    exception : RequestValidationError
+        The exception thrown by Pydantic
+
+    Returns
+    -------
+    Function call to the main exception handler
+        Handled BadRequestException
+    """
     logger.warning("request validation exception: %s", str(exception))
     return api_exception_handler(
         request, BadRequestException(details={"errors": exception.errors()})

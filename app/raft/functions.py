@@ -54,7 +54,7 @@ class FollowerExecutorThread(StateExecutorThread):
         state = self._args[0]
         state.state = State.FOLLOWER
         state.ping_time = datetime.datetime.utcnow()
-        while not self._stop_evt.wait(timeout=1):
+        while not self._stop_evt.wait(timeout=state.heartbeat_repeat):
             be_follower(state)
 
 
@@ -74,7 +74,7 @@ class CandidateExecutorThread(StateExecutorThread):
             # no nodes left except us? no need to be a candidate
             return
 
-        while not self._stop_evt.wait(timeout=1):
+        while not self._stop_evt.wait(timeout=state.heartbeat_repeat):
             try:
                 be_candidate(state)
             except RaftStateException:  # end of candidature
@@ -87,7 +87,7 @@ class LeaderExecutorThread(StateExecutorThread):
     def run(self) -> None:
         state = self._args[0]
         state.state = State.LEADER
-        while not self._stop_evt.wait(timeout=1):
+        while not self._stop_evt.wait(timeout=state.heartbeat_repeat):
             try:
                 be_leader(state)
             except RaftStateException:  # end of leadership
@@ -135,8 +135,9 @@ def be_candidate(state: FastAPIState) -> None:
             response = requests.put(
                 f"http://{replica}/api/v1/raft/vote",
                 json=RaftMessageSchema.from_state_object(state).dict(),
+                timeout=0.5,
             )
-        except requests.exceptions.ConnectionError as error:
+        except requests.RequestException as error:
             logger.info("got error: %s", str(error))
             continue
         response_data = response.json()
@@ -181,14 +182,15 @@ def be_leader(state: FastAPIState) -> None:
             response = requests.post(
                 f"http://{replica}/api/v1/raft/log",
                 json=RaftMessageSchema.from_state_object(state).dict(),
+                timeout=0.5,
             )
-        except requests.exceptions.ConnectionError as error:
+        except requests.RequestException as error:
             logger.info("got error: %s", str(error))
             continue
         response_data = response.json()
         if response.status_code != HTTPStatus.OK:
-            if state.term < response_data["data"]["term"]:
-                term_reset(state, response_data["data"]["term"])
+            if state.term < response_data["error"]["term"]:
+                term_reset(state, response_data["error"]["term"])
 
 
 def reset_candidate(state: FastAPIState) -> None:
