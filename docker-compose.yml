@@ -22,8 +22,11 @@ services:
     ports:
       - 8000:8000
     environment:
-      - MAIN_APP_NAME=node
-      - ADDRESS=localhost:8000
+      - RAFT_SERVICE_NAME=node
+      - BIND_HOST=localhost
+      - BIND_PORT=8000
+      - TEMPLATES_DIR=/app/monitor/templates/
+      - REFRESH_RATE_MILLIS=1000
     volumes:
       - .:/app
     command: uvicorn monitor.main:app --host 0.0.0.0 --port 8000

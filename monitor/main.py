@@ -1,66 +1,128 @@
+"""Monitor shows status information about the nodes in the cluster.
+
+The monitor.main module is a small FastAPI app, that periodically aggregates
+status information on all nodes in the cluster by calling their status
+endpoints.
+
+A static webpage is then served, which refreshes itself every 1 second and
+displays the cluster status.
+
+"""
+
 import logging
-import os
 import sys
 import threading
-import time
 
+import dns
+import requests
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseSettings
+
 from app.raft.discovery import discover_by_dns, get_hostname_by_ip
-import requests
-import dns
 
-main_app_name = os.environ.get("MAIN_APP_NAME")
-my_hostname = os.environ.get("HOSTNAME")
-address = os.environ.get("ADDRESS", "localhost:8080")
-templates_dir = os.environ.get("TEMPLATES_DIR", "/app/monitor/templates/")
 
-app = FastAPI()
-templates = Jinja2Templates(directory=templates_dir)
-logging.basicConfig(
-    format="%(message)s", stream=sys.stdout, encoding="utf-8", level="DEBUG"
-)
+class Settings(BaseSettings):
+    """Settings / Configuration variables"""
 
-nodes_info = {"monitor": {
-    "id": my_hostname,
-    "app_name": "monitor",
-    "term": "-",
-    "state": "-",
-}}
+    RAFT_SERVICE_NAME: str
+    BIND_HOST: str
+    BIND_PORT: str
+    TEMPLATES_DIR: str
+    REFRESH_RATE_MILLIS: int
 
-@app.get("/nodes")
-async def nodes():
-    return {"nodes": [v for k, v in nodes_info.items()]}
+    # set by docker
+    HOSTNAME: str
 
-@app.get("/")
-async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "host": address})
 
 class RepeatTimer(threading.Timer):
+    """Subclass of python threading.Timer that repeats itself"""
+
     def run(self):
         while not self.finished.wait(self.interval):
             self.function(*self.args, **self.kwargs)
 
+
+app = FastAPI()
+settings = Settings()
+templates = Jinja2Templates(directory=settings.TEMPLATES_DIR)
+logging.basicConfig(
+    format="%(message)s", stream=sys.stdout, encoding="utf-8", level="DEBUG"
+)
+
+nodes_info = {
+    "monitor": {
+        "id": settings.HOSTNAME,
+        "app_name": "monitor",
+        "term": "-",
+        "state": "-",
+    }
+}
+
+
 def update_node_info(node_info: dict) -> None:
+    """Refresh info about all nodes in cluster
+
+    Parameters
+    ----------
+    node_info : dict
+        Dict to be updated
+    """
     services = {}
     try:
-        ip_list = discover_by_dns(main_app_name)
-        for ip in ip_list:
-            services[str(ip)] = get_hostname_by_ip(ip)
+        ip_list = discover_by_dns(settings.RAFT_SERVICE_NAME)
+        for ip_address in ip_list:
+            services[str(ip_address)] = get_hostname_by_ip(ip_address)
 
     except dns.exception.DNSException as error:
-        logging.warning(f"DNS raised error: {str(error)}")
+        logging.warning("DNS raised error: %s", str(error))
 
-    for replica, replica_ip in services.items():
+    for replica, _ in services.items():
         try:
             response = requests.get(f"http://{replica}/api/v1/raft/")
             node_info[replica] = response.json()["data"]
         except requests.RequestException as error:
-            logging.warning(f"could not request service status: {str(error)}")
-            pass
+            logging.warning("could not request service status: %s", str(error))
         except KeyError:
             pass
+
 
 thread = RepeatTimer(1.0, update_node_info, [nodes_info])
 thread.start()
 
+
+@app.get("/nodes")
+async def nodes():
+    """Serve status information on all hosts in docker network.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dict containing a list of nodes
+    """
+    return {"nodes": [v for k, v in nodes_info.items()]}
+
+
+@app.get("/")
+async def root(request: Request):
+    """Serve a small webpage displaying status information
+
+    Parameters
+    ----------
+    request : Request
+        FastAPI/Starlette Request
+
+    Returns
+    -------
+    Jinja2Template
+        Rendered HTML page
+    """
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "host": settings.BIND_HOST,
+            "port": settings.BIND_PORT,
+            "refresh_rate": settings.REFRESH_RATE_MILLIS,
+        },
+    )
