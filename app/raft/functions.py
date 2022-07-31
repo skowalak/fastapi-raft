@@ -251,7 +251,7 @@ def term_reset(
     logger.debug("resetting current term: %s", state.term)
     if next_term > state.term:
         logger.debug("term update: %s -> %s", state.term, next_term)
-    state.term = next_term
+        state.term = next_term
     if current_role is State.CANDIDATE:
         reset_candidate(state)
     elif current_role is State.LEADER:
