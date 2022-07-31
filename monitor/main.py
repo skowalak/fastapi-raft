@@ -50,14 +50,7 @@ logging.basicConfig(
     format="%(message)s", stream=sys.stdout, encoding="utf-8", level="DEBUG"
 )
 
-nodes_info = {
-    "monitor": {
-        "id": settings.HOSTNAME,
-        "app_name": "monitor",
-        "term": "-",
-        "state": "-",
-    }
-}
+nodes_info = {}
 
 
 def update_node_info(node_info: dict) -> None:
@@ -69,6 +62,14 @@ def update_node_info(node_info: dict) -> None:
         Dict to be updated
     """
     services = {}
+    node_info_new = {
+        "monitor": {
+            "id": settings.HOSTNAME,
+            "app_name": "monitor",
+            "term": "-",
+            "state": "-",
+        }
+    }
     try:
         ip_list = discover_by_dns(settings.RAFT_SERVICE_NAME)
         for ip_address in ip_list:
@@ -79,12 +80,17 @@ def update_node_info(node_info: dict) -> None:
 
     for replica, _ in services.items():
         try:
-            response = requests.get(f"http://{replica}/api/v1/raft/")
-            node_info[replica] = response.json()["data"]
-        except requests.RequestException as error:
+            response = requests.get(f"http://{replica}/api/v1/raft/", timeout=0.5)
+            node_info_new[replica] = response.json()["data"]
+            logging.debug(
+                "response from node %s, status %s", replica, response.status_code
+            )
+        except (requests.RequestException, KeyError) as error:
             logging.warning("could not request service status: %s", str(error))
-        except KeyError:
-            pass
+            continue
+
+    node_info.clear()
+    node_info.update(dict(sorted(node_info_new.items())))
 
 
 thread = RepeatTimer(1.0, update_node_info, [nodes_info])
@@ -100,7 +106,7 @@ async def nodes():
     Dict[str, Any]
         A dict containing a list of nodes
     """
-    return {"nodes": [v for k, v in nodes_info.items()]}
+    return {"nodes": list(nodes_info.values())}
 
 
 @app.get("/")
