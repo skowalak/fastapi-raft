@@ -93,7 +93,9 @@ def update_node_info(node_info: dict) -> None:
     node_info.update(dict(sorted(node_info_new.items())))
 
 
-thread = RepeatTimer(1.0, update_node_info, [nodes_info])
+thread = RepeatTimer(
+    settings.REFRESH_RATE_MILLIS / 1000, update_node_info, [nodes_info]
+)
 thread.start()
 
 

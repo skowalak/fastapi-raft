@@ -7,6 +7,8 @@ services:
       dockerfile: app.Dockerfile
     environment:
       - APP_NAME=node
+      - SCRIPT_LEADER_PATH=/app/script_leader.sh
+      - SCRIPT_FOLLOWER_PATH=/app/script_follower.sh
     volumes:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 80
@@ -26,7 +28,7 @@ services:
       - BIND_HOST=localhost
       - BIND_PORT=8000
       - TEMPLATES_DIR=/app/monitor/templates/
-      - REFRESH_RATE_MILLIS=1000
+      - REFRESH_RATE_MILLIS=5000
     volumes:
       - .:/app
     command: uvicorn monitor.main:app --host 0.0.0.0 --port 8000
