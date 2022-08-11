@@ -21,9 +21,9 @@ class Settings(BaseSettings):
 
     FASTAPI_TITLE: str = "Consensus Cluster Service"
     FASTAPI_MAINT: str = "Sebastian Kowalak"
-    FASTAPI_EMAIL: str = "skowalak@techfak.uni-bielefeld.de"
+    FASTAPI_EMAIL: str = ""
     FASTAPI_DESCR: str = (
-        "392155 Netzwerkprogrammierung Final Project.\n"
+        "FastAPI-Raft.\n"
         "\n"
         "### Master Election\n"
         "\n"

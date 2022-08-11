@@ -1,6 +1,4 @@
-# Netzwerkprogrammierung SoSe2022 Abschlussprojekt
-
-###### Sebastian Kowalak, Matrikelnummer 2703855
+# FastAPI-Raft
 
 This project is an implementation of the `Raft` Consensus Algorithm, originally
 described in [this paper][raft-paper]. Raft creates a consensus about the state
@@ -16,15 +14,7 @@ also for the [`hashicorp` implementation in Go][hashicorp] and the
 For a cool animated guide to Raft see [this page][raft-guide], and
 [this video][raft-video] is a talk by one of Raft's creators.
 
-## Assignment
-
-* Implementation of a leader election algorithm using a quorum, meaning more
-  than half of nodes in the cluster must vote for the same node in order for it
-  to become master
-* Failover, meaning nodes can disappear and reappear at any given time, or new
-  nodes can be added to the group
-
-### Weaknesses / Caveats of this implementation
+## Weaknesses / Caveats of this implementation
 
 * I have not found an easy way to scale the replicas up, after the cluster has
   already started.
@@ -48,9 +38,6 @@ In this Code Base, the [numpydoc v1.5.dev0 standard][npdoc] for Python
 docstrings is applied. Formatting was applied with [black][black].
 The code was linted using [pylint][pylint], [mypy][mypy] and [bandit][bandit].
 Tests were not linted.
-
-**Disclaimer**: I have worked with FastAPI for the past two years and
-**reused some of my own code** for this project.
 
 ### License
 
@@ -150,7 +137,8 @@ In the `docker-compose.yaml` the two services are set up:
   `MAIN_APP_NAME` envvar and its own port and bind address via `ADDRESS`.
   These config options can be reviewed in `monitor/main.py`.
 
-To run the example, `cd` into the project directory and run the docker compose definition with:
+To run the example, `cd` into the project directory and run the docker compose
+definition with:
 
 ``` sh
 docker-compose up --build
@@ -158,13 +146,12 @@ docker-compose up --build
 
 When all services are started up, visit
 [http://localhost:8000/](http://localhost:8000) in a browser to view the status
-page. **The monitor webpage may lag behind and show a leader node still as candidate.**
-
-![screenshot](screenshot.png)
+page. **The monitor webpage may lag behind and show a leader node still as
+candidate.**
 
 Service replicas can be paused using the `docker pause <container>` command. To
-resume a paused replica, use `docker unpause <container>`. For a list of running
-replicas, use the `docker ps` command.
+resume a paused replica, use `docker unpause <container>`. For a list of
+running replicas, use the `docker ps` command.
 
 To disable logging, set the envvar `LOGGING` to "ERROR" and restart. See
 `app/config.py` or [below](#configuration).
@@ -178,7 +165,7 @@ Note that default values may be subject to change.
 |:----------------------------------|:------------|--------------:|
 | FASTAPI_TITLE                     | The name of the application. | `Consensus Cluster Service` |
 | FASTAPI_MAINT                     | The maintainer name. | `Sebastian Kowalak` |
-| FASTAPI_EMAIL                     | Maintainer e-mail address. | `skowalak@techfak.uni-bielefeld.de` |
+| FASTAPI_EMAIL                     | Maintainer e-mail address. | `<redacted>` |
 | FASTAPI_DESCR                     | A description for display in OpenAPI/SwaggerDoc. | `<redacted for brevity>` |
 | FASTAPI_SCHEM                     | The path where the OpenAPI schema is available. | `/openapi.json` |
 | FASTAPI_DOCS                      | The path where SwaggerDoc is available. | `/docs` |
